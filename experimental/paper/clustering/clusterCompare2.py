@@ -52,7 +52,7 @@ while True:
     print nonEmpty
 
     nonEmpty += 1
-    if nonEmpty == 30:
+    if nonEmpty == 20:
         break
     accuracy1 = agglomerative.__accuracy__(subject)
 

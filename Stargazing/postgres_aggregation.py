@@ -577,13 +577,49 @@ class PanoptesAPI:
         metadata_constraints =  " and metadata->>'workflow_version' = '"+str(self.workflow_version)+"'"
         #metadata_constraints = ""
         #user_id = t[2], created_at = t[4], user_ip=t[3],annotations=t[1],subject_id=t[0][0]
-        select = "SELECT user_id,created_at,user_ip,annotations,subject_ids from classifications where project_id="+str(self.project_id)+" and workflow_id=" + str(self.workflow_id) + metadata_constraints
+        select = "SELECT user_id,created_at,user_ip,annotations,subject_ids from classifications where project_id="+str(self.project_id)+" and workflow_id=" + str(self.workflow_id)# +" and created_at > '"+ str(datetime.datetime(2015,3,18,18)) +"'"
         print select
+
         cur = self.conn.cursor()
         cur.execute(select)
 
         for ii,t in enumerate(cur.fetchall()):
+
+            # if (t[0] is not None) and (int(t[0]) == 10):
+            #     print t
             yield t
+
+        # def __yield_classifications__(self):
+        # metadata_constraints =  " and metadata->>'workflow_version' = '"+str(self.workflow_version)+"'"
+        # #metadata_constraints = ""
+        # #user_id = t[2], created_at = t[4], user_ip=t[3],annotations=t[1],subject_id=t[0][0]
+        # select = "SELECT user_id,created_at,user_ip,annotations,subject_ids from classifications where project_id="+str(self.project_id)+" and workflow_id=" + str(self.workflow_id) + metadata_constraints
+        # print select
+        # return
+        # # cur = self.conn.cursor()
+        # # cur.execute(select)
+        # #
+        # # for ii,t in enumerate(cur.fetchall()):
+        # #     yield t
+
+    def __find_user__(self,user_name):
+        select = "SELECT * FROM users where display_name = '" + user_name +"'"
+
+        cur = self.conn.cursor()
+        cur.execute(select)
+
+        user_id = cur.fetchall()[0][0]
+
+
+        select = "SELECT * from classifications where user_id = "+str(user_id)
+        # # print select
+        cur = self.conn.cursor()
+        cur.execute(select)
+        # print len(cur.fetchall())
+
+        #
+        for r in cur.fetchall():
+            print r
 
     def __update_aggregations__(self):
         """

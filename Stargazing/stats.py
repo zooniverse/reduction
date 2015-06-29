@@ -17,6 +17,7 @@ if __name__ == "__main__":
     site = os.getenv('SITE', "temp")
     stargazing = PanoptesAPI(0,0)
     a,count = stargazing.__get_stats__()
+    print a,count
     #print count
     #environment = os.getenv('ENVIRONMENT', "staging")
 
@@ -52,7 +53,7 @@ if __name__ == "__main__":
     #print response.status_code
     #print response.text
 
-    response = requests.put("https://panoptes-comments.firebaseio.com/stargazing2015-zooniverse-org/projects/"+site_id+"/volunteers-count.json",data=str(a))
+    #response = requests.put("https://panoptes-comments.firebaseio.com/stargazing2015-zooniverse-org/projects/"+site_id+"/volunteers-count.json",data=str(a))
     print response.status_code
     #     if response.status_code == 200:
     #         break
@@ -60,7 +61,7 @@ if __name__ == "__main__":
     #         print response.status_code
     #
 
-    response = requests.put("https://panoptes-comments.firebaseio.com/stargazing2015-zooniverse-org/projects/"+site_id+"/classifications-count.json",data=str(count))
+    #response = requests.put("https://panoptes-comments.firebaseio.com/stargazing2015-zooniverse-org/projects/"+site_id+"/classifications-count.json",data=str(count))
     print response.status_code
     #     if response.status_code == 200:
     #         break

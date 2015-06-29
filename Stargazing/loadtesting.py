@@ -2,8 +2,9 @@ __author__ = 'greg'
 import random
 import math
 import sys
+import gc
 steps = ["centered_in_crosshairs", "subtracted", "circular", "centered_in_host"]
-
+gc.set_debug(gc.DEBUG_LEAK)
 
 def create_annotations():
     annotations = []
@@ -44,7 +45,7 @@ def score_index(annotations):
 
 l = []
 
-@profile
+#@profile
 def create_list():
     for classification_count in range(1000000):
         subject_id = random.randint(0,50000)
@@ -56,7 +57,7 @@ print sys.getsizeof(l)
 
 scores = {}
 
-@profile
+#@profile
 def test():
     for subject_id,annotations in l:
         #print classification

@@ -34,7 +34,7 @@ class Classification:
     def __task_aggregation__(self,classifications,gold_standard=False):
         pass
 
-    def __aggregate__(self,raw_classifications,workflow):
+    def __aggregate__(self,raw_classifications,workflow,clustering_results=None):
         # use the first subject_id to find out which tasks we are aggregating the classifications for
         self.results = {}
         classification_tasks,marking_tasks = workflow
@@ -50,6 +50,25 @@ class Classification:
                         self.results[subject_id] = {"param":"task_id"}
                     self.results[subject_id][task_id] = task_results[subject_id]
             else:
+                # # we have classifications associated with markings
+                # # are these shapes "uncertain" - ie. was there more than one tool that could have made them?
+                # assert isinstance(classification_tasks[task_id],dict)
+                # print "====------"
+                # print classification_tasks[task_id]
+                # print "shapes" in classification_tasks[task_id]
+                # print classification_tasks[task_id]["shapes"]
+                print classification_tasks
+                if "shapes" in classification_tasks[task_id]:
+                    print classification_tasks[task_id]
+                    # for shape in classification_tasks[task_id]["shapes"]:
+                    #     # print shape
+                    #     for subject_id in clustering_results[task_id][shape]:
+                    #         print clustering_results[task_id][shape][subject_id]
+                    #     # print clustering_results[task_id][shape]
+                    #     print shape
+                    #     print "hello"
+                    #     assert False
+                assert False
                 continue
                 # we have markings
                 for shape in classification_tasks[task_id]:
