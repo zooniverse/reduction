@@ -29,8 +29,7 @@ class IterativeAggregation(Aggregation):
         else:
             return self.aggregations[subject_id]["count"]
 
-    def __set_timestamp__(self,timestamp):
-        self.current_timestamp = timestamp
+
 
 
 class IterativePantopesAPI(PanoptesAPI):

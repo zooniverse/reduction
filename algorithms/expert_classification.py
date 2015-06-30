@@ -25,7 +25,7 @@ class ExpertClassification(Classification):
                 else:
                     ridings_dict[subject_id].append(center)
 
-                for user,vote,pt in poll:
+                # for user,vote,pt in poll:
                     
 
                 for c in classifications:

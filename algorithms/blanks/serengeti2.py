@@ -6,15 +6,7 @@ import pymongo
 import urllib
 import matplotlib.pyplot as plt
 import cv2
-
-# the directory to store the movie preview clips in
-image_directory = "/home/greg/Databases/chimp/images/"
-
-# connect to the mongodb server
-client = pymongo.MongoClient()
-db = client['chimp_2015-05-03']
-subjects = db["chimp_subjects"]
-
+from skimage.measure import structural_similarity as ssim
 
 def mse(imageA, imageB):
     # taken from
@@ -29,43 +21,63 @@ def mse(imageA, imageB):
     # the two images are
     return err
 
-true_positives = []
+# the directory to store the movie preview clips in
+image_directory = "/home/greg/Databases/serengeti/images/"
+
+# connect to the mongodb server
+client = pymongo.MongoClient()
+db = client['serengeti_2015-02-22']
+subjects = db["serengeti_subjects"]
+
 false_positives = []
+true_positives = []
 
-# iterate over a set of subjects
-# for each subject get the retirement reason - used to create gold standard data
-for ii,s in enumerate(subjects.find().limit(250)):
-    print ii
-    id_ = s["zooniverse_id"]
-    preview_url = s["location"]["previews"][0][0][:-5]
+all_files = []
+reasons = []
+
+for ii,s in enumerate(subjects.find({"tutorial":{"$ne":True},"coords":[-2.4672743413359295, 34.75278520232197]}).limit(100)):
+    # print s["coords"],s["created_at"]
     reason = s["metadata"]["retire_reason"]
+    coords = s["coords"]
 
-    # down every preview clip for this subject
-    for i in range(1,16):
-        url = preview_url + str(i) + ".jpg"
-        fname = id_+"_"+str(i)+".jpg"
+    print s["created_at"]
+    print coords
+    print s["metadata"]["timestamps"]
+
+    urls = s["location"]["standard"]
+    slash_indices = [i.rfind("/") for i in urls]
+    fnames = [str(i[j+1:]) for i,j in zip(urls,slash_indices)]
+
+    if len(fnames) == 1:
+        continue
+
+    for url,fname in zip(urls,fnames):
         if not(os.path.isfile(image_directory+fname)):
                 urllib.urlretrieve(url, image_directory+fname)
 
-    # find the maximum mse between all pairs of images
+    all_files.append(fnames)
+    reasons.append(reason)
+
+
+for subject_index in range(len(all_files)-1):
     differences = []
-    for i in range(1,16):
-        for j in range(i+1,16):
-            fname1 = image_directory+id_+"_"+str(i)+".jpg"
-            f1 = cv2.imread(fname1)
-            fname2 = image_directory+id_+"_"+str(j)+".jpg"
-            f2 = cv2.imread(fname2)
+    for fname1 in all_files[subject_index]:
+        for fname2 in all_files[subject_index+1]:
+            print image_directory+fname1
+            f1 = cv2.imread(image_directory+fname1)
+            print image_directory+fname2
+            f2 = cv2.imread(image_directory+fname2)
 
             f1 = cv2.cvtColor(f1,cv2.COLOR_BGR2GRAY)
             f2 = cv2.cvtColor(f2,cv2.COLOR_BGR2GRAY)
-            differences.append(mse(f1,f2))
+            differences.append(ssim(f1,f2))
 
     # add the threshold value to either the false positive (if the movie was
     # classified as blank by users) or true positive
-    if reason == "blank":
-        false_positives.append(max(differences))
+    if reasons[subject_index] == "blank":
+        false_positives.append(np.mean(differences))
     else:
-        true_positives.append(max(differences))
+        true_positives.append(np.mean(differences))
 
 # create the ROC curve
 alphas = true_positives[:]
@@ -78,9 +90,9 @@ for a in alphas:
     Y.append(len([y for y in true_positives if y >= a])/float(len(true_positives)))
 
 print len(false_positives)
+print len(true_positives)
 plt.plot(X,Y)
+plt.plot([0,1],[0,1],"--",color="green")
 plt.xlabel("False Positive Count")
 plt.ylabel("True Positive Count")
 plt.show()
-
-

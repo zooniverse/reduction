@@ -219,7 +219,6 @@ def onpick(clustering_alg):
         ind = event.ind
         clustering_alg.x_roc = float(x[ind[0]])
         clustering_alg.y_roc = float(y[ind[0]])
-        # print
 
         plt.close()
 
@@ -414,7 +413,7 @@ class Cluster:
         self.project_api.__display_image__(subject_id,args_l,kwargs_l,title=self.algorithm_name)
 
     @abc.abstractmethod
-    def __inner_fit__(self,markings,user_ids,jpeg_file=None,debug=False,gold_standard=False,subject_id=None):
+    def __inner_fit__(self,markings,user_ids,tools):
         """
         the main function for clustering
         :param user_ids:
@@ -446,22 +445,24 @@ class Cluster:
         :return:
         """
         self.clusterResults = {}
+
         # start by calling the api to get the annotations along with the list of who made each marking
         # so for this function, we know that annotations = markings
         # all_markings =  self.project_api.__get_markings__(subject_id,gold_standard)
         # print all_markings
         # self.clusterResults[subject_id] = {"param":"task_id"}
         for task_id in raw_markings:
+            print task_id
             for shape in raw_markings[task_id]:
                 for subject_id in raw_markings[task_id][shape]:
-                    users,markings = zip(*raw_markings[task_id][shape][subject_id])
+                    users,markings,tools = zip(*raw_markings[task_id][shape][subject_id])
 
                     # otherwise, just set to empty
                     if (markings == []) or (markings == [[] for i in users]):
                         cluster_results = [],[],[]
                         time_to_cluster = 0
                     else:
-                        cluster_results,time_to_cluster = self.__inner_fit__(markings,users)
+                        cluster_results,time_to_cluster = self.__inner_fit__(markings,users,tools)
 
                         if task_id not in self.clusterResults:
                             self.clusterResults[task_id] = {}
@@ -662,8 +663,6 @@ class Cluster:
             subject_id,local_index = global_indices[gold_index]
             users_per_subject = self.project_api.__users__(subject_id)
             ips_per_subject = self.project_api.__ips__(subject_id)
-            print users_per_subject
-            print ips_per_subject
 
             if local_index is None:
                 user_per_cluster = []
@@ -689,10 +688,6 @@ class Cluster:
                         user_accuracy[user_id][1] += 1
                     else:
                         user_accuracy[user_id][3] += 1
-
-        print user_accuracy
-
-        pass
 
     def __signal_ibcc_gold__(self,global_indices,gold_standard_pts,split_ip_address=True):
         """

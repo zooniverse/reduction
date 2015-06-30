@@ -9,6 +9,7 @@ import yaml
 # in the paper Galaxy Zoo Supernovae
 # an example of the json format used is
 # [{u'task': u'centered_in_crosshairs', u'value': 1}, {u'task': u'subtracted', u'value': 1}, {u'task': u'circular', u'value': 1}, {u'task': u'centered_in_host', u'value': 0}]
+
 def score_index(annotations):
     assert annotations[0]["task"] == "centered_in_crosshairs"
     if annotations[0]["value"] == 0:

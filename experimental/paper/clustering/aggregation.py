@@ -650,6 +650,8 @@ class Aggregation:
         confusion = [[max(int(true_neg),1),max(int(false_pos),1)],[max(int(false_neg),1),max(int(true_pos),1)]]
 
         # create the config file
+        print "this is here"
+        print base_directory+"/Databases/"+self.project+"_ibcc.py"
         with open(base_directory+"/Databases/"+self.project+"_ibcc.py","wb") as f:
             f.write("import numpy as np\n")
             f.write("scores = np.array([0,1])\n")

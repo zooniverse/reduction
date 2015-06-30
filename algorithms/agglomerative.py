@@ -130,7 +130,6 @@ class Agglomerative(clustering.Cluster):
             results.append(self.__results_to_json__(nodes[-1]))
 
         end = time.time()
-        print results
         return results,end-start
 
     def __check__(self):

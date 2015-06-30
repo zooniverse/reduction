@@ -7,22 +7,23 @@ import sys
 if os.path.exists("/home/ggdhines/github/pyIBCC/python"):
     sys.path.append("/home/ggdhines/github/pyIBCC/python")
 else:
-    sys.path.append("/Users/greghines/Code/pyIBCC/python")
+    sys.path.append("/home/greg/github/pyIBCC/python")
 import ibcc
 
 
 if os.path.isdir("/Users/greghines/Databases/serengeti"):
     baseDir = "/Users/greghines/Databases/serengeti/"
 else:
-    baseDir = "/home/ggdhines/Databases/serengeti/"
+    baseDir = "/home/greg/Databases/serengeti/"
 
-species = ['elephant','warthog','impala','buffalo',,'gazelleThomsons','dikDik','giraffe','gazelleGrants','lionFemale','baboon','hippopotamus','ostrich','human','otherBird','hartebeest','secretaryBird','hyenaSpotted','mongoose','reedbuck','topi','guineaFowl','eland','aardvark','lionMale','porcupine','koriBustard','bushbuck','hyenaStriped','jackal','cheetah','waterbuck','leopard','reptiles','serval','aardwolf','vervetMonkey','rodents','honeyBadger','batEaredFox','rhinoceros','civet','genet','zorilla','hare','caracal','wildcat']
+species = ['elephant','warthog','impala','buffalo','gazelleThomsons','dikDik','giraffe','gazelleGrants','lionFemale','baboon','hippopotamus','ostrich','human','otherBird','hartebeest','secretaryBird','hyenaSpotted','mongoose','reedbuck','topi','guineaFowl','eland','aardvark','lionMale','porcupine','koriBustard','bushbuck','hyenaStriped','jackal','cheetah','waterbuck','leopard','reptiles','serval','aardwolf','vervetMonkey','rodents','honeyBadger','batEaredFox','rhinoceros','civet','genet','zorilla','hare','caracal','wildcat']
 species2 = ['wildebeest','zebra']
 users = []
 photos = []
 
 
 def createConfigFile(classID):
+    print(baseDir+"ibcc/"+str(classID)+"config.py")
     f = open(baseDir+"ibcc/"+str(classID)+"config.py",'wb')
     print("import numpy as np\nscores = np.array([0,1])", file=f)
     print("nScores = len(scores)", file=f)

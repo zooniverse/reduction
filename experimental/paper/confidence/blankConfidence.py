@@ -13,8 +13,9 @@ from scipy.stats import beta
 import matplotlib.pyplot as plt
 from scipy.special import gamma as gammaf
 from scipy.optimize import fmin
+from scipy.stats import ks_2samp
 project = "serengeti"
-date = "2015-02-09"
+date = "2015-02-22"
 
 # for Greg - which computer am I on?
 if os.path.exists("/home/ggdhines"):
@@ -59,14 +60,51 @@ user_collection = db[project+"_users"]
 #     false_blanks = []
 #     u = user_collection.find_one({"name":user})
 names_to_skip = ["brian-c","parrish","arfon","kosmala","aliburchard","davidmill","laurawhyte","mschwamb","kellinora","ttfnrob"]
-times = {}
 
-for ii,classification in enumerate(classification_collection.find({"tutorial":{"$ne":True},"user_name":{"$nin":names_to_skip}}).limit(100000)):
+def classifications_to_retirement(zooniverse_id):
+    num_votes = 0
+    for num_votes, classification in enumerate(classification_collection.find({"subjects.0.zooniverse_id":zooniverse_id}).limit(25)):
+        classified = []
+        for ann in classification["annotations"]:
+            if "species" in ann:
+                classified.append(ann["species"])
+
+        classified.sort()
+        classified = tuple(classified)
+
+        if not(classified in all_classifications):
+            all_classifications[classified] = 1
+        else:
+            all_classifications[classified] += 1
+
+        #print all_classifications
+        if max(all_classifications.values()) == 10:
+            break
+
+    return num_votes+1
+
+
+times = {}
+baseline_votes = []
+# for subject_count,subject in enumerate(subject_collection.find({"tutorial":{"$ne":True},"state":"complete","metadata.retire_reason":{"$nin":["blank"]}}).limit(100)):
+#     print subject_count
+#     zooniverse_id = subject["zooniverse_id"]
+#     #print zooniverse_id
+#
+#     all_classifications = {}
+#     num_votes = classifications_to_retirement(zooniverse_id)
+#
+#     baseline_votes.append(num_votes+1)
+#print np.mean(baseline_votes),np.median(baseline_votes),np.std(votes)
+#assert False
+print "now reading in classifications"
+
+for ii,classification in enumerate(classification_collection.find({"tutorial":{"$ne":True},"user_name":{"$nin":names_to_skip}}).limit(600000)):
     try:
         name = classification["user_name"]
     except KeyError:
         continue
-
+    print classification["annotations"]
     zooniverse_id = classification["subjects"][0]["zooniverse_id"]
 
     annotations = classification["annotations"]
@@ -101,12 +139,16 @@ def betaNLL(param,*args):
     nll=-1*np.sum(lg)
     return nll
 
-for name in times.keys()[:100]:
+total = 0
+totalError = 0
+overall_errors = set()
+print "now looking for false positives"
+for name in times.keys()[:250]:
     times[name].sort(key = lambda x:x[0])
     correct = 0
     incorrect = 0
     correct_times = []
-    incorrect_times = []
+    incorrect_list = []
     for classification_index,(t,nothing,zooniverse_id) in enumerate(times[name][:-1]):
         subject = subject_collection.find_one({"zooniverse_id":zooniverse_id})
 
@@ -130,40 +172,71 @@ for name in times.keys()[:100]:
                 correct_times.append(time_to_classify.total_seconds())
             else:
                 incorrect += 1
-                incorrect_times.append(time_to_classify.total_seconds())
-
-    if correct < 50:
-        continue
+                incorrect_list.append((time_to_classify.total_seconds(),zooniverse_id))
 
     if (incorrect > 0) and (correct > 0):
-        print name,len(times[name])
-        print correct,incorrect
-        print np.mean(correct_times),np.mean(incorrect_times)
-        #print sum([1 for c in correct_times if c >= min(incorrect_times)])/float(len(correct_times))
-        #print
-        max_time = max(max(correct_times),max(incorrect_times))
-        min_time = min(min(correct_times),min(incorrect_times))
-        data = correct_times
-        data = [(t-min_time)/float(max_time-min_time) for t in data]
-        #print data
-        a,b,lower,scale = beta.fit(data)
-        #print a,b,lower,scale
-        #print
-        #print beta.cdf(0.8,a,b)
-        #----------------Fit using moments----------------
-        mean=np.mean(data)
-        var=np.var(data,ddof=1)
-        alpha1=mean**2*(1-mean)/var-mean
-        beta1=alpha1*(1-mean)/mean
+        # print name,len(times[name])
+        # print correct,incorrect
+        # print np.mean(correct_times),np.mean(incorrect_times)
+        incorrect_list.sort(key = lambda x:x[0])
+        incorrect_times = zip(*incorrect_list)[0]
+        ids = zip(*incorrect_list)[1]
 
+        # is this any overall difference?
+        s,starting_p = ks_2samp(correct_times,incorrect_times)
+        if starting_p < 0.01:
+            for ii in range(len(incorrect_times)-1,-1,-1):
+                s,p = ks_2samp(correct_times,incorrect_times[:ii])
+                if p > 0.01:
+                    break
+            totalError+= len(incorrect_times)-ii
+            print (len(incorrect_times)-ii,len(incorrect_times))
+            errors = incorrect_times[ii:]
+            zooniverse_errors = [ids[incorrect_times.index(t)] for t in errors]
+            for id in zooniverse_errors:
+                overall_errors.add(id)
+            #for id in zooniverse_errors:
+            #    print subject_collection.find_one({"zooniverse_id":id})
+            #    print
+        else:
+            print 0,len(incorrect_times)
 
-        print beta.cdf((incorrect_times[-1]-min_time)/(max_time-min_time),alpha1,beta1)
-        print
+        total += len(incorrect_times)
+        # #print sum([1 for c in correct_times if c >= min(incorrect_times)])/float(len(correct_times))
+        # #print
+        # max_time = max(max(correct_times),max(incorrect_times))
+        # min_time = min(min(correct_times),min(incorrect_times))
+        # data = correct_times
+        # data = [(t-min_time)/float(max_time-min_time) for t in data]
+        # #print data
+        # a,b,lower,scale = beta.fit(data)
+        # #print a,b,lower,scale
+        # #print
+        # #print beta.cdf(0.8,a,b)
+        # #----------------Fit using moments----------------
+        # mean=np.mean(data)
+        # var=np.var(data,ddof=1)
+        # alpha1=mean**2*(1-mean)/var-mean
+        # beta1=alpha1*(1-mean)/mean
+        #
+        #
+        # print beta.cdf((incorrect_times[-1]-min_time)/(max_time-min_time),alpha1,beta1)
+        #print
         #break
 
         #print correct_times
         #print incorrect_times
 
+print totalError,total
+error_votes = []
+for zooniverse_id in list(overall_errors):
+    num_votes = classifications_to_retirement(zooniverse_id)
+    error_votes.append(num_votes)
+
 
 #print times.keys()
 #print user_collection.find_one({"name":"kellinora"})
+print np.mean(baseline_votes),np.median(baseline_votes)
+print np.mean(error_votes),np.median(error_votes)
+
+print ks_2samp(baseline_votes,error_votes)
