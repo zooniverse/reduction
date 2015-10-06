@@ -436,7 +436,8 @@ class CsvOut:
             tarball = tarfile.open(self.output_directory + "aggregations.tar.gz", "w:gz")
 
         for workflow_id in self.workflows:
-            print workflow_id
+            print "writing out aggregations for workflow " + str(workflow_id)
+
             # # create the output files for this workflow
             output_directory = self.__make_files__(workflow_id)
 

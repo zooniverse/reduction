@@ -429,7 +429,7 @@ class AggregationAPI:
         # todo - set things up so that you don't have to redo all of the aggregations just to rerun ibcc
         if workflows is None:
             workflows = self.workflows
-        print self.workflows
+        #print self.workflows
         given_subject_set = (subject_set != None)
 
         for workflow_id in workflows:
@@ -440,7 +440,10 @@ class AggregationAPI:
             print "workflow id : " + str(workflow_id)
             print "aggregating " + str(len(subject_set)) + " subjects"
             # self.__describe__(workflow_id)
-            classification_tasks,marking_tasks = self.workflows[workflow_id]
+
+            # again, we don't have this separation automatically
+            #classification_tasks,marking_tasks = self.workflows[workflow_id]
+            classification_tasks,marking_tasks = self.__separate_tasks__(self.workflows[workflow_id])
 
             # set up the clustering algorithms for the shapes we actually use
             used_shapes = set()
@@ -479,6 +482,83 @@ class AggregationAPI:
                 self.__upsert_results__(workflow_id,aggregations)
             else:
                 return aggregations
+
+
+    def __separate_tasks__(self,workflow):
+        """
+        workflow should be a dict object representing the workflow JSON
+        """
+
+        classifications = {}
+        marking = {}
+
+        for key,value in workflow.iteritems():
+            if value["type"]=="marking":
+                marking[key] = value
+            else:
+                classifications[key] = value
+
+        return [classifications,marking]
+        
+    def __csv_annotations__(self):
+        """ 
+        get annotations from csv file
+        """
+        def annotation_generator(workflow_id,subject_set):
+            assert isinstance(subject_set,list) or isinstance(subject_set,set)
+            # filter on only the major version (the whole number part)
+            version = int(math.floor(float(self.versions[workflow_id])))
+
+            # classification_tasks,marking_tasks = self.workflows[workflow_id]
+            # raw_classifications = {}
+            # raw_markings = {}
+
+            if subject_set is None:
+                subject_set = self.__load_subjects__(workflow_id)
+
+            #classifications = []
+
+            with open(self.csv_classification_file,'rb') as cfile:
+                creader = csv.reader(cfile,delimiter=',',quotechar='"')
+
+                # discard header
+                creader.next()
+
+                for row in creader:
+                    subject_workflow_id = int(row[2])
+                    subject_data = row[10]
+                    user_name = row[0]
+                    annotations = json.loads(row[9])
+                    workflow_version = int(math.floor(float(row[4])))
+                    metadata = json.loads(row[8])
+
+                    subject_id = int(json.loads(subject_data).keys()[0])
+
+                    # see if we want this subject
+                    if subject_workflow_id==workflow_id and subject_id in subject_set:
+                        # see if the classification was on the current workflow version
+                        if workflow_version==version:
+                            #classifications.append([subject_id,annotations,metadata])
+
+                            # check to see if the metadata contains image size
+                            height = None
+                            width = None
+
+                            if "subject_dimensions" in metadata:
+                                for dimensions in metadata["subject_dimensions"]:
+                                    if dimensions is not None:
+                                        assert isinstance(dimensions,dict)
+                                        height = dimensions["naturalHeight"]
+                                        width = dimensions["naturalWidth"]
+
+                            # return the classification
+                            yield subject_id,user_name,annotations,(height,width)
+
+            raise StopIteration()
+        return annotation_generator
+
+
+
 
     def __cassandra_annotations__(self):
         """
@@ -815,30 +895,51 @@ class AggregationAPI:
         """
         subjects = []
 
-        if self.only_retired_subjects:
-            stmt = """SELECT * FROM "subjects"
-            INNER JOIN "set_member_subjects" ON "set_member_subjects"."subject_id" = "subjects"."id"
-            INNER JOIN "subject_workflow_counts" ON "subject_workflow_counts"."set_member_subject_id" = "set_member_subjects"."id"
-            WHERE "subject_workflow_counts"."workflow_id" = """+str(workflow_id)+ """ AND "subject_workflow_counts"."retired_at" >= '""" + str(self.previous_runtime) + """'"""
+        # assume only retired subjects for now...
+        with open(self.csv_subject_file,'rb') as sfile:
+            sreader = csv.reader(sfile, delimiter=',', quotechar='"')
+            
+            # discard header
+            sreader.next()
+
+            # get all subjects
+            for row in sreader:
+                subject_id = int(row[0])
+                #workflow_ids = json.loads(row[2])
+                #subject_set_id = int(row[3])
+                #classifications_by_workflow = json.loads(row[6])
+                retired_in_workflow = json.loads(row[7])
+
+                # get retired subjects in this workflow
+                if workflow_id in retired_in_workflow:
+                    subjects.append(subject_id)
+                    
+                
+        #if self.only_retired_subjects:
+        #    stmt = """SELECT * FROM "subjects"
+        #    INNER JOIN "set_member_subjects" ON "set_member_subjects"."subject_id" = "subjects"."id"
+        #    INNER JOIN "subject_workflow_counts" ON "subject_workflow_counts"."set_member_subject_id" = "set_member_subjects"."id"
+        #    WHERE "subject_workflow_counts"."workflow_id" = """+str(workflow_id)+ """ AND "subject_workflow_counts"."retired_at" >= '""" + str(self.previous_runtime) + """'"""
             # WHERE "subject_workflow_counts"."workflow_id" = """+str(workflow_id)+ """ AND "subject_workflow_counts"."retired_at" IS NOT NULL"""
 
-            cursor = self.postgres_session.cursor()
-            cursor.execute(stmt)
+        #    cursor = self.postgres_session.cursor()
+        #    cursor.execute(stmt)
 
-            for subject in cursor.fetchall():
-                subjects.append(subject[0])
-        else:
+        #    for subject in cursor.fetchall():
+        #        subjects.append(subject[0])
+        #else:
             # stmt = "SELECT subject_id,workflow_version FROM \"classifications\" WHERE \"project_id\" = " + str(self.project_id) + " and \"workflow_id\" = " + str(workflow_id) + " and \"updated_at\" > '" + str(datetime.datetime(2000,1,1)) +"'"
-            stmt = "SELECT subject_id,workflow_version FROM classifications WHERE project_id = " + str(self.project_id) + " and workflow_id = " + str(workflow_id)# + " and \"updated_at\" > '" + str(datetime.datetime(2000,1,1)) +"'"
+        #    stmt = "SELECT subject_id,workflow_version FROM classifications WHERE project_id = " + str(self.project_id) + " and workflow_id = " + str(workflow_id)# + " and \"updated_at\" > '" + str(datetime.datetime(2000,1,1)) +"'"
             # filter for subjects which have the correct major version number
-            if not self.ignore_versions:
-                subjects = set([r.subject_id for r in self.cassandra_session.execute(stmt) if int(r.workflow_version) == int(self.versions[workflow_id]) ])
-                if subjects == set():
-                    print "no subjects found - maybe remove version filter"
-            else:
-                subjects = set([r.subject_id for r in self.cassandra_session.execute(stmt)])
+        #    if not self.ignore_versions:
+        #        subjects = set([r.subject_id for r in self.cassandra_session.execute(stmt) if int(r.workflow_version) == int(self.versions[workflow_id]) ])
+        #        if subjects == set():
+        #            print "no subjects found - maybe remove version filter"
+        #    else:
+        #        subjects = set([r.subject_id for r in self.cassandra_session.execute(stmt)])
 
-        return list(subjects)
+        #return list(subjects)
+        return subjects
 
     def __get_subject_metadata__(self,subject_id):
         print self.host_api+"subjects/"+str(subject_id)+"?"
@@ -1715,13 +1816,14 @@ class AggregationAPI:
             annotation_generator = self.__cassandra_annotations__()
         else:
             # todo - add support for csv annotatons
-            annotation_generator = self.__csv_annotations__
+            annotation_generator = self.__csv_annotations__()
 
         # keep track of the non-logged in users for each subject
         non_logged_in_users = dict()
 
         # load the classification and marking json dicts - helps parse annotations
-        classification_tasks,marking_tasks = self.workflows[workflow_id]
+        #classification_tasks,marking_tasks = self.workflows[workflow_id]
+        classification_tasks,marking_tasks = self.__separate_tasks__(self.workflows[workflow_id])
 
         # this is what we return
         raw_classifications = {}
@@ -1749,7 +1851,7 @@ class AggregationAPI:
                 user_id = non_logged_in_users[subject_id]
 
             # annotations = json.loads(record.annotations)
-            annotation = json.loads(annotation)
+            #annotation = json.loads(annotation)
 
             # go through each annotation and get the associated task
             for task in annotation:
@@ -1980,7 +2082,6 @@ class AggregationAPI:
         # this bit will have to be rewritten to retrieve the aggregations
         # but we'll need to store them somewhere first...
 
-
         stmt = "select subject_id,aggregation,updated_at from aggregations where workflow_id = " + str(workflow_id)
         if subject_set != None:
             stmt += " and subject_id = " + str(subject_set)
@@ -1988,15 +2089,21 @@ class AggregationAPI:
 
         cursor.execute(stmt)
 
+        # by here we have all the aggregations in the form [subject_id,aggregation,updated_at]
+        # for a particular workflow
+        # (we don't actually care about updated_at, so ignore that)
+
         for r in cursor.fetchall():
             aggregation = r[1]
 
+            # convert aggregation string to dictionary if necessary
             if isinstance(aggregation,str):
                 aggregation = json.loads(aggregation)
             elif not isinstance(aggregation,dict):
                 print type(aggregation)
             assert isinstance(aggregation,dict)
 
+            # return one subject and its aggregation
             yield r[0],aggregation
 
             # for task_id in aggregation:
@@ -2038,7 +2145,8 @@ if __name__ == "__main__":
     with AggregationAPI(classifications_file,subjects_file,workflows_file) as project:
 #    with AggregationAPI(project_identifier,environment,report_rollbar=True) as project:
         # project.__migrate__()
-        # project.__aggregate__()
+        
+        project.__aggregate__()
 
         c = csv_output.CsvOut(project,output_dir)
         c.__write_out__()

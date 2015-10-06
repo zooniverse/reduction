@@ -50,6 +50,7 @@ class Classification:
 
             # now go through the individual followup questions
             # range(len()) - since individual values will be either "single" or "multiple"
+
             for followup_question_index in range(len(classification_tasks[task_id][tool])):
                 global_index = str(task_id)+"_" +str(tool)+"_"+str(followup_question_index)
 
@@ -308,10 +309,28 @@ class Classification:
 
         return aggregations
 
+    def __separate_tasks__(self,workflow):
+        """
+        workflow should be a dict object representing the workflow JSON
+        """
+
+        classifications = {}
+        marking = {}
+
+        for key,value in workflow.iteritems():
+            if value["type"]=="marking":
+                marking[key] = value
+            else:
+                classifications[key] = value
+
+        return [classifications,marking]
+
     def __aggregate__(self,raw_classifications,workflow,aggregations):
         # use the first subject_id to find out which tasks we are aggregating the classifications for
         # aggregations = {}
-        classification_tasks,marking_tasks = workflow
+        #classification_tasks,marking_tasks = workflow
+        classification_tasks,marking_tasks = self.__separate_tasks__(workflow)
+    
 
         # start by doing existence classifications for markings
         # i.e. determining whether a cluster is a true positive or false positive
@@ -348,6 +367,8 @@ class Classification:
 
             # task_results = {}
             # just a normal classification question
+            print classification_tasks[task_id]
+
             if classification_tasks[task_id] in ["single","multiple"]:
                 # did anyone actually do this classification?
                 if task_id in raw_classifications:
