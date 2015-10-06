@@ -267,6 +267,10 @@ class AggregationAPI:
         self.cluster_algs = {}
 
     def __setup__(self):
+
+
+        print "setup"
+        
         # just for when we are treating an ouroboros project like a panoptes one
         # in which the subject ids will be zooniverse_ids, which are strings
         self.subject_id_type = "int"
@@ -349,6 +353,12 @@ class AggregationAPI:
 
         # Make sure these set up properly
         self.workflows,self.versions,self.instructions,self.retirement_thresholds,self.workflow_names = self.__get_workflow_details_from_file__(workflows_file)
+
+        #print self.workflows
+        #print self.versions
+        #print self.instructions
+        #print self.retirement_thresholds
+        #print self.workflow_names
 
         #self.workflows,self.versions,self.instructions,self.updated_at_timestamps = self.__get_workflow_details__()
         #self.retirement_thresholds = self.__get_retirement_threshold__()
@@ -649,6 +659,8 @@ class AggregationAPI:
 
         return count
 
+
+    
     def __enter__(self):
         # check if another instance of the aggregation engine is already running
         # if so, raise an error
@@ -656,41 +668,44 @@ class AggregationAPI:
         # todo - maybe write something to the lock file in case another instance checks at the
         # todo - exact same time. What about instances for different projects?
 
-        if os.path.isfile(expanduser("~")+"/aggregation.lock"):
-            raise InstanceAlreadyRunning()
-        open(expanduser("~")+"/aggregation.lock","w").close()
+        # don't bother with this stuff for stand-alone
+        # print expanduser("~")+"/aggregation.lock"
+        #  if os.path.isfile(expanduser("~")+"/aggregation.lock"):
+        #     raise InstanceAlreadyRunning()
+        #  open(expanduser("~")+"/aggregation.lock","w").close()
 
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         # only report to rollbar if we are not in development
-        if (exc_type is not None) and self.report_roll and (self.environment != "development"):
+        #if (exc_type is not None) and self.report_roll and (self.environment != "development"):
             # load in the yml file - again - this time to get the rollbar token
-            try:
-                panoptes_file = open("/app/config/aggregation.yml","rb")
-            except IOError:
-                panoptes_file = open(base_directory+"/Databases/aggregation.yml","rb")
-            api_details = yaml.load(panoptes_file)
-
-            rollbar_token = api_details[self.environment]["rollbar"]
-            rollbar.init(rollbar_token,self.environment)
-            rollbar.report_exc_info()
+            #try:
+            #    panoptes_file = open("/app/config/aggregation.yml","rb")
+            #except IOError:
+            #    panoptes_file = open(base_directory+"/Databases/aggregation.yml","rb")
+            #api_details = yaml.load(panoptes_file)
+            #
+            #rollbar_token = api_details[self.environment]["rollbar"]
+            #rollbar.init(rollbar_token,self.environment)
+            #rollbar.report_exc_info()
 
         # only update time stamp if there were no problems
-        if exc_type is None:
-            statements_and_params = []
-            insert_statement = self.cassandra_session.prepare("insert into most_recent (project_id,classification) values (?,?)")
-            statements_and_params.append((insert_statement, (self.project_id,self.new_runtime)))
-            execute_concurrent(self.cassandra_session, statements_and_params)
+        #if exc_type is None:
+            #statements_and_params = []
+            #insert_statement = self.cassandra_session.prepare("insert into most_recent (project_id,classification) values (?,?)")
+            #statements_and_params.append((insert_statement, (self.project_id,self.new_runtime)))
+            #execute_concurrent(self.cassandra_session, statements_and_params)
 
         # shutdown the connection to Cassandra and remove the lock so other aggregation instances
         # can run, regardless of whether an error occurred
-        if self.cassandra_session is not None:
-            self.cassandra_session.shutdown()
+        #if self.cassandra_session is not None:
+        #    self.cassandra_session.shutdown()
 
         # remove the lock only if we created the lock
-        if exc_type != InstanceAlreadyRunning:
-            os.remove(expanduser("~")+"/aggregation.lock")
+        #if exc_type != InstanceAlreadyRunning:
+        #    os.remove(expanduser("~")+"/aggregation.lock")
+        return
 
     def __get_classifications__(self,subject_id,task_id,cluster_index=None,question_id=None):
         # either both of these variables are None or neither of them are
@@ -846,6 +861,8 @@ class AggregationAPI:
 
 
     def __get_workflow_details_from_file__(self,workflow_file):
+
+        print "get_workflow_details_from_file"
         
         instructions = {}
         workflows = {}
@@ -856,6 +873,8 @@ class AggregationAPI:
 
         with open(workflow_file,'rb') as wffile:
             wfreader = csv.reader(wffile,delimiter=',')
+
+            print "workflow file opened: " + workflow_file
 
             # skip the header
             wfreader.next() # or is it next(wfreader)
@@ -868,9 +887,13 @@ class AggregationAPI:
                 workflow_id = int(row[0])
                 workflow_name = row[1]
                 workflow_version = int(row[2])
-                workflow_active = (row[3]=="TRUE")
-                workflow_tasks = json.dumps(row[12])
-                workflow_retirement = json.dumps(row[13])
+                workflow_active = (row[3].lower()=="true")
+                workflow_tasks = json.loads(row[12])
+                workflow_retirement = json.loads(row[13])
+
+                #print "id: " + str(workflow_id)
+                #print "active: " + str(workflow_active)
+                #print row[3]
                 
                 # process if it's the active version of the workflow
                 if (workflow_active):
@@ -890,7 +913,12 @@ class AggregationAPI:
                     # read in the instructions associated with the workflow
                     # not used for the actual aggregation but for printing out results to the user
                     instructions[workflow_id] = {}
-                    for task_id,task in workflow_tasks():
+
+                    #print
+                    #print workflow_tasks
+                    #print
+                    
+                    for task_id,task in workflow_tasks.iteritems():
                         instructions[workflow_id][task_id] = {}
                         # classification task
                         if task["type"] in ["single","multiple"]:
@@ -1948,6 +1976,11 @@ class AggregationAPI:
         generator for giving aggregation results per subject id/task
         """
 
+        # we'll have to come up with another way to do this rather than using databases...
+        # this bit will have to be rewritten to retrieve the aggregations
+        # but we'll need to store them somewhere first...
+
+
         stmt = "select subject_id,aggregation,updated_at from aggregations where workflow_id = " + str(workflow_id)
         if subject_set != None:
             stmt += " and subject_id = " + str(subject_set)
@@ -1977,8 +2010,8 @@ class AggregationAPI:
 if __name__ == "__main__":
     # todo - use getopt
 
-    if len(sys.argv) < 4:
-        print "Format: aggregation_api.py <classifications file> <subjects file> <workflows file>"
+    if len(sys.argv) < 5:
+        print "Format: aggregation_api.py <classifications file> <subjects file> <workflows file> <output dir>"
         exit(1)
 
     # we'd like to be passed the name of the classifications file
@@ -1989,6 +2022,9 @@ if __name__ == "__main__":
 
     # and the workflows
     workflows_file = sys.argv[3]
+
+    # output directory
+    output_dir = sys.argv[4]
 
     # I don't need to identify projects, just need the csv file
     #project_identifier = sys.argv[1]
@@ -2004,7 +2040,7 @@ if __name__ == "__main__":
         # project.__migrate__()
         # project.__aggregate__()
 
-        c = csv_output.CsvOut(project)
+        c = csv_output.CsvOut(project,output_dir)
         c.__write_out__()
 
 

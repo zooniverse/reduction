@@ -6,19 +6,20 @@ import tarfile
 import math
 
 class CsvOut:
-    def __init__(self,project):
+    def __init__(self,project,output_dir):
         # assert isinstance(project,aggregation_api.AggregationAPI)
         self.project = project
+        self.output_directory = output_dir + "/"
 
-        self.project_id = project.project_id
+        #self.project_id = project.project_id
         self.instructions = project.instructions
         self.workflow_names = project.workflow_names
         self.workflows = project.workflows
+        self.retirement_thresholds = project.retirement_thresholds
+        self.versions = project.versions
 
         self.__yield_aggregations__ = project.__yield_aggregations__
         self.__count_check__ = project.__count_check__
-        self.retirement_thresholds = project.retirement_thresholds
-        self.versions = project.versions
 
         # dictionary to hold the output files
         self.csv_files = {}
@@ -95,34 +96,43 @@ class CsvOut:
         self.csv_files = {}
 
         # start by creating a directory specific to this project - if one does not already exist
-        output_directory = "/tmp/"+str(self.project_id)+"/"
-        if not os.path.exists(output_directory):
-            os.makedirs(output_directory)
+        #output_directory = "/tmp/"+str(self.project_id)+"/"
+        if not os.path.exists(self.output_directory):
+            os.makedirs(self.output_directory)
 
         # now create a sub directory specific to the workflow
         workflow_name = self.workflow_names[workflow_id]
         workflow_name = self.__csv_string__(workflow_name)
-        output_directory = "/tmp/"+str(self.project_id)+"/" +str(workflow_id) + "_" + workflow_name + "/"
+        output_subdirectory = self.output_directory +"/" +str(workflow_id) + "_" + workflow_name + "/"
 
-        if not os.path.exists(output_directory):
-            os.makedirs(output_directory)
-        self.workflow_directories[workflow_id] = output_directory
+        if not os.path.exists(output_subdirectory):
+            os.makedirs(output_subdirectory)
+        self.workflow_directories[workflow_id] = output_subdirectory
 
-        classification_tasks,marking_tasks = self.workflows[workflow_id]
+        #print self.workflows[workflow_id]
+
+        # Hmmm... doesn't look like workflows is separated like this in the file parsing...
+        #classification_tasks,marking_tasks = self.workflows[workflow_id]
+        classification_tasks = self.workflows[workflow_id]
 
         # go through the classification tasks - they will either be simple c. tasks (one answer allowed)
         # multiple c. tasks (more than one answer allowed) and possibly a follow up question to a marking
+        #for task_id in classification_tasks:
         for task_id in classification_tasks:
             # is this task a simple classification task?
-            if classification_tasks[task_id] == "single":
+            if classification_tasks[task_id]["type"] == "single":
                 instructions = self.instructions[workflow_id][task_id]["instruction"]
-                self.__single_response_csv_header__(output_directory,task_id,instructions)
+                self.__single_response_csv_header__(self.output_directory,task_id,instructions)
 
-            elif classification_tasks[task_id] == "multiple":
+            elif classification_tasks[task_id]["type"] == "multiple":
                 # create both a detailed view and a summary view
                 instructions = self.instructions[workflow_id][task_id]["instruction"]
                 self.__multi_response_csv_header__(output_directory,task_id,instructions)
+            elif classification_tasks[task_id]["type"] == "marking":
+                shapes = set(marking_tasks[task_id])
+                self.__marking_header_setup__(workflow_id,task_id,shapes,output_directory)
             else:
+                print "other: " + classification_tasks[task_id]["type"]
                 for tool_id in classification_tasks[task_id]:
                     for followup_index,answer_type in enumerate(classification_tasks[task_id][tool_id]):
                         instructions = self.instructions[workflow_id][task_id]["tools"][tool_id]["followup_questions"][followup_index]["question"]
@@ -132,11 +142,7 @@ class CsvOut:
                         else:
                             self.__multi_response_csv_header__(output_directory,id_,instructions)
 
-        for task_id in marking_tasks:
-            shapes = set(marking_tasks[task_id])
-            self.__marking_header_setup__(workflow_id,task_id,shapes,output_directory)
-
-        return output_directory
+        return self.output_directory
 
     def __readme_text__(self,workflow_id):
         """
@@ -144,7 +150,7 @@ class CsvOut:
         :param workflow_id:
         :return:
         """
-        with open("/tmp/"+str(self.project_id)+"/readme.md", "a") as readme_file:
+        with open(self.output_directory+"readme.md", "a") as readme_file:
             readme_file.write("Summary of the csv files found in this directory\n")
             classification_tasks,marking_tasks = self.workflows[workflow_id]
 
@@ -417,7 +423,7 @@ class CsvOut:
                 row = str(subject_id) + ","+ str(p_index)+ ","+ tool +",\"" + str(polygon) + "\""
                 self.csv_files[id_].write(row+"\n")
 
-    def __write_out__(self,subject_set = None,compress=True):
+    def __write_out__(self,subject_set = None,compress=False):
         """
         create the csv outputs for a given set of workflows
         the workflows are specified by self.workflows which is determined when the aggregation engine starts
@@ -427,7 +433,7 @@ class CsvOut:
 
         tarball = None
         if compress:
-            tarball = tarfile.open("/tmp/"+str(self.project_id)+"export.tar.gz", "w:gz")
+            tarball = tarfile.open(self.output_directory + "aggregations.tar.gz", "w:gz")
 
         for workflow_id in self.workflows:
             print workflow_id
@@ -443,7 +449,7 @@ class CsvOut:
             f.close()
 
         # add some final details to the read me file
-        with open("/tmp/"+str(self.project_id)+"/readme.md", "a") as readme_file:
+        with open(self.output_directory + "aggregations_readme.md", "a") as readme_file:
             readme_file.write("Details and food for thought:\n")
             with open("readme.txt","rb") as f:
                 text = f.readlines()
@@ -454,7 +460,7 @@ class CsvOut:
         # self.__csv_to_zip__()
         if compress:
             tarball.close()
-            return "/tmp/"+str(self.project_id)+"export.tar.gz"
+            return self.output_directory + "aggregations.tar.gz"
 
     # todo - figure out if this string is necessary
     def __csv_string__(self,string):
