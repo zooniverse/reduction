@@ -1002,6 +1002,14 @@ class AggregationAPI:
                 # process if it's the active version of the workflow
                 if (workflow_active):
 
+		    #print row
+		    #print workflow_active
+ 		    #print workflow_id
+                    #print workflow_name
+                    #print workflow_version
+                    #print workflow_retirement
+                    #print workflow_tasks
+                
                     # save the workflow
                     workflows[workflow_id] = workflow_tasks
 
@@ -1012,7 +1020,12 @@ class AggregationAPI:
                     names[workflow_id] = workflow_name
 
                     # get the retirement limit
-                    retirement[workflow_id] = int(workflow_retirement["options"]["count"])
+
+	            # right now the retirement output may be broken	
+		    if workflow_retirement=={}:
+		    	retirement[workflow_id] = 15
+		    else:
+                    	retirement[workflow_id] = int(workflow_retirement["options"]["count"])
 
                     # read in the instructions associated with the workflow
                     # not used for the actual aggregation but for printing out results to the user

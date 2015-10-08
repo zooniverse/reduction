@@ -267,6 +267,7 @@ class Classification:
         :param clustering_results:
         :return:
         """
+
         print "tool classification - more than one tool could create " +str(shape) + "s in task " + str(task_id)
 
         if aggregations == {}:
@@ -318,7 +319,14 @@ class Classification:
         marking = {}
 
         for key,value in workflow.iteritems():
-            if value["type"]=="marking":
+
+	    #print "---"
+	    #print key
+	    #print value
+            #print value["type"]
+	    #print "---"
+	
+            if value["type"]=="drawing":
                 marking[key] = value
             else:
                 classifications[key] = value
@@ -331,6 +339,11 @@ class Classification:
         #classification_tasks,marking_tasks = workflow
         classification_tasks,marking_tasks = self.__separate_tasks__(workflow)
     
+	#print "classification"
+	#print classification_tasks
+	#print
+	#print "marking"
+	#print marking_tasks
 
         # start by doing existence classifications for markings
         # i.e. determining whether a cluster is a true positive or false positive
@@ -340,10 +353,25 @@ class Classification:
         # note that polygons and rectangles (since they are basically a type of polygon)
         # handle some of this themselves
         for task_id in marking_tasks:
-            for shape in set(marking_tasks[task_id]):
+
+	    for tool in marking_tasks[task_id]["tools"]:
+            #for shape in set(marking_tasks[task_id]):
+
+		shape = tool["type"]
+
+		print "---"
+		print task_id
+		print shape
+		#print tool
+
                 # these shapes are dealt with else where
                 # if shape not in ["polygon","text"]:
+
+		# !!! this is returning empty aggregations
                 aggregations = self.__existence_classification__(task_id,shape,aggregations)
+
+		print "***"
+		print aggregations
 
                 # tool classification for rectangles/polygon is handled by the actual clustering algorithm
                 # technically, that clustering algorithm could also take care of existence as well
