@@ -54,7 +54,9 @@ class CsvOut:
         self.csv_files[task_id].write(row+"\n")
 
     def __single_response_csv_header__(self,output_directory,id_,instructions):
-        fname = str(id_) + instructions[:50]
+
+        #fname = str(id_) + instructions[:50]
+	fname = instructions[:50]
         fname = self.__csv_string__(fname)
         fname += ".csv"
 
@@ -103,6 +105,7 @@ class CsvOut:
         # now create a sub directory specific to the workflow
         workflow_name = self.workflow_names[workflow_id]
         workflow_name = self.__csv_string__(workflow_name)
+
         output_subdirectory = self.output_directory +"/" +str(workflow_id) + "_" + workflow_name + "/"
 
         if not os.path.exists(output_subdirectory):
@@ -122,15 +125,15 @@ class CsvOut:
             # is this task a simple classification task?
             if classification_tasks[task_id]["type"] == "single":
                 instructions = self.instructions[workflow_id][task_id]["instruction"]
-                self.__single_response_csv_header__(self.output_directory,task_id,instructions)
+                self.__single_response_csv_header__(output_subdirectory,task_id,instructions)
 
             elif classification_tasks[task_id]["type"] == "multiple":
                 # create both a detailed view and a summary view
                 instructions = self.instructions[workflow_id][task_id]["instruction"]
-                self.__multi_response_csv_header__(output_directory,task_id,instructions)
+                self.__multi_response_csv_header__(output_subdirectory,task_id,instructions)
             elif classification_tasks[task_id]["type"] == "marking":
                 shapes = set(marking_tasks[task_id])
-                self.__marking_header_setup__(workflow_id,task_id,shapes,output_directory)
+                self.__marking_header_setup__(workflow_id,task_id,shapes,output_subdirectory)
             else:
                 print "other: " + classification_tasks[task_id]["type"]
                 for tool_id in classification_tasks[task_id]:
@@ -138,7 +141,7 @@ class CsvOut:
                         instructions = self.instructions[workflow_id][task_id]["tools"][tool_id]["followup_questions"][followup_index]["question"]
                         id_ = (task_id,tool_id,followup_index)
                         if answer_type == "single":
-                            self.__single_response_csv_header__(output_directory,id_,instructions)
+                            self.__single_response_csv_header__(output_subdirectory,id_,instructions)
                         else:
                             self.__multi_response_csv_header__(output_directory,id_,instructions)
 
@@ -329,7 +332,18 @@ class CsvOut:
         most_likely,top_probability = max(votes.items(), key = lambda x:x[1])
 
         # extract the text corresponding to the most likely answer
-        most_likely_label = answers[int(most_likely)]
+	
+	#print "---"
+	#print votes
+	#print num_users
+	#print most_likely
+	#print top_probability	
+	#print answers
+
+        most_likely_label = most_likely
+        #most_likely_label = answers[int(most_likely)]
+
+
         # this corresponds to when the question is a follow up
         if isinstance(most_likely_label,dict):
             most_likely_label = most_likely_label["label"]
@@ -346,6 +360,23 @@ class CsvOut:
         # finally write the stuff out to file
         self.csv_files[task_id].write(row)
 
+    def __separate_tasks__(self,workflow):
+        """
+        workflow should be a dict object representing the workflow JSON
+        """
+
+        classifications = {}
+        marking = {}
+
+        for key,value in workflow.iteritems():
+            if value["type"]=="marking":
+                marking[key] = value
+            else:
+                classifications[key] = value
+
+        return [classifications,marking]
+
+
     def __subject_output__(self,workflow_id,subject_id,aggregations):
         """
         add csv rows for all the output related to this particular workflow/subject_id
@@ -354,13 +385,18 @@ class CsvOut:
         :param aggregations:
         :return:
         """
-        if self.__count_check__(workflow_id,subject_id) < self.retirement_thresholds[workflow_id]:
-            return
 
-        classification_tasks,marking_tasks = self.workflows[workflow_id]
+	# meh. Let's not bother with this right now...
+        #if self.__count_check__(workflow_id,subject_id) < self.retirement_thresholds[workflow_id]:
+        #    return
+
+        classification_tasks,marking_tasks = self.__separate_tasks__(self.workflows[workflow_id])
 
         # a subject might not have results for all tasks
-        for task_id,task_type in classification_tasks.items():
+        for task_id in classification_tasks:
+
+	    task_type = classification_tasks[task_id]["type"]
+
             if task_id not in aggregations:
                 continue
 
@@ -444,6 +480,11 @@ class CsvOut:
             # results are going to be ordered by subject id (because that's how the results are stored)
             # so we can going to be cycling through task_ids. That's why we can't loop through classification_tasks etc.
             for subject_id,aggregations in self.__yield_aggregations__(workflow_id,subject_set):
+
+		#print "---"
+		#print "subject: " + str(subject_id)
+		#print aggregations
+
                 self.__subject_output__(workflow_id,subject_id,aggregations)
 
         for f in self.csv_files.values():

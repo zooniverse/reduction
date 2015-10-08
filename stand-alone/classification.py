@@ -363,13 +363,13 @@ class Classification:
         # now go through the normal classification aggregation stuff
         # which can include follow up questions
         for task_id in classification_tasks:
-            print "classifying task " + str(task_id)
+            #print "classifying task " + str(task_id)
 
             # task_results = {}
             # just a normal classification question
-            print classification_tasks[task_id]
+            #print classification_tasks[task_id]["type"]
 
-            if classification_tasks[task_id] in ["single","multiple"]:
+            if classification_tasks[task_id]["type"] in ["single","multiple"]:
                 # did anyone actually do this classification?
                 if task_id in raw_classifications:
 
@@ -397,15 +397,24 @@ class VoteCount(Classification):
         """
         # results = {}
 
+	#print "***"
+	#print task_id
+	#print aggregations
+	#print raw_classifications
+	
         for subject_id in raw_classifications:
+
             vote_counts = {}
             if subject_id == "param":
                 continue
             for user,ballot in raw_classifications[subject_id]:
+
                 if ballot is None:
                     continue
                 # in which case only one vote is allowed
-                if isinstance(ballot,int):
+
+		# differentiate between list of strings and single string
+                if isinstance(ballot,(str,unicode)):
                     if ballot in vote_counts:
                         vote_counts[ballot] += 1
                     else:
@@ -417,6 +426,7 @@ class VoteCount(Classification):
                             vote_counts[vote] += 1
                         else:
                             vote_counts[vote] = 1
+
             # convert to percentages
             percentages = {}
             for vote in vote_counts:

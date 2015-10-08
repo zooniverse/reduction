@@ -218,6 +218,9 @@ class AggregationAPI:
         self.versions = None
         self.classifications = None
 
+	# save aggregations in memory 
+	self.saved_aggregations = {}
+
         # which version of panoptes - staging or production to call
         #self.host_api = None
 
@@ -478,7 +481,7 @@ class AggregationAPI:
             # and we don't want to automatically save the results
 
             if store_values:
-                print "upserting results"
+                #print "upserting results"
                 self.__upsert_results__(workflow_id,aggregations)
             else:
                 return aggregations
@@ -2001,6 +2004,16 @@ class AggregationAPI:
         return subjects
 
     def __upsert_results__(self,workflow_id,aggregations):
+
+	# we're just going to save them in memory. Because this is all just a hack.
+
+	print "saving aggregations for workflow " + str(workflow_id)
+	self.saved_aggregations[workflow_id] = aggregations
+
+	return
+
+
+    def __upsert_results_old__(self,workflow_id,aggregations):
         """
         see
         # http://stackoverflow.com/questions/8134602/psycopg2-insert-multiple-rows-with-one-query
@@ -2073,7 +2086,24 @@ class AggregationAPI:
             postgres_cursor.execute("INSERT INTO aggregations (workflow_id, subject_id, aggregation, created_at, updated_at) VALUES " + insert_str[1:])
         self.postgres_session.commit()
 
+
     def __yield_aggregations__(self,workflow_id,subject_set=None):
+
+	# db query returns subject_id,aggregation,updated_at
+	#    aggregation is converted to dictionary
+	# yields subject_id and aggregation as dictionary
+	# okay. Easy enough to do...
+	
+	workflow_aggregations = self.saved_aggregations[workflow_id]
+
+	for subject in workflow_aggregations:
+	    yield subject,workflow_aggregations[subject]
+
+	
+
+
+
+    def __yield_aggregations_old__(self,workflow_id,subject_set=None):
         """
         generator for giving aggregation results per subject id/task
         """
