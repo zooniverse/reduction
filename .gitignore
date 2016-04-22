@@ -58,3 +58,5 @@ docs/_build/
 .idea/reduction.iml
 .idea/aggregation.iml
 config/*.yml
+*.lnk
+*.csv
