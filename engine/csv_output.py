@@ -354,7 +354,11 @@ class CsvOut:
                 detailed_results.write(",cluster_id")
 
                 answer_dict = dict()
-                for answer_key,answer in self.instructions[workflow_id][task_id]["tools"][tool_id]["followup_questions"][followup_id]["answers"].items():
+                answers = self.instructions[workflow_id][task_id]["tools"]
+                answers = answers[tool_id]["followup_questions"][followup_id]
+                answers = answers.get("answers", {})
+
+                for answer_key, answer in answers.items():
                     answer_dict[answer_key] = answer["label"]
             else:
                 answer_dict = self.instructions[workflow_id][task_id]["answers"]
