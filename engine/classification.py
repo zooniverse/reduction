@@ -226,45 +226,63 @@ class Classification:
 
         return aggregations
 
-    def __aggregate__(self,raw_classifications,workflow,aggregations,workflow_id):
-        # use the first subject_id to find out which tasks we are aggregating the classifications for
-        # aggregations = {}
-        classification_tasks,marking_tasks,_ = workflow
-
-        # start by doing existence classifications for markings
-        # i.e. determining whether a cluster is a true positive or false positive
+    def __aggregate__(
+        self,
+        raw_classifications,
+        tasks,
+        aggregations,
+        workflow_id
+    ):
+        # start by doing existence classifications for markings i.e.
+        # determining whether a cluster is a true positive or false positive
         # also do tool type classification for tasks where more than one tool
-        # can create the same shape
-        # followup questions will be dealt as classification tasks
-        # note that polygons and rectangles (since they are basically a type of polygon)
+        # can create the same shape followup questions will be dealt as
+        # classification tasks note that polygons and rectangles (since they
+        # are basically a type of polygon)
+
         # handle some of this themselves
-        for task_id in marking_tasks:
-            for shape in set(marking_tasks[task_id]):
+        for task_id in tasks['marking']:
+            for shape in set(tasks['marking'][task_id]):
                 # these shapes are dealt with else where
                 # if shape not in ["polygon","text"]:
-                aggregations = self.__existence_classification__(task_id,shape,aggregations)
+                aggregations = self.__existence_classification__(
+                    task_id,
+                    shape,
+                    aggregations
+                )
 
-                # figure out the most likely tool to have created this cluster (since up until now we've only cared
-                # about shape, not tool). Polygons are handled differently - will be in the blob clustering code
-                # since polygon aggregation isn't really clustering
+                # figure out the most likely tool to have created this cluster
+                # (since up until now we've only cared about shape, not
+                # tool). Polygons are handled differently - will be in the blob
+                # clustering code since polygon aggregation isn't really
+                # clustering
                 if shape != "polygon":
-                    aggregations = self.__tool_classification__(task_id,shape,aggregations)
+                    aggregations = self.__tool_classification__(
+                        task_id,
+                        shape,
+                        aggregations
+                    )
 
         # now go through the normal classification aggregation stuff
         # which can include follow up questions
-        for task_id in classification_tasks:
+        for task_id in tasks['classification']:
             # just a normal classification question
-            if classification_tasks[task_id] in ["single","multiple"]:
+            if tasks['classification'][task_id] in ["single", "multiple"]:
                 # did anyone actually do this classification?
                 if task_id in raw_classifications:
-
-                    aggregations = self.__task_aggregation__(raw_classifications[task_id],task_id,aggregations)
-
+                    aggregations = self.__task_aggregation__(
+                        raw_classifications[task_id],
+                        task_id,
+                        aggregations
+                    )
             else:
                 # we have a follow up classification
-                aggregations = self.__subtask_classification__(task_id,marking_tasks,raw_classifications,aggregations)
-
-
+                aggregations = self.__subtask_classification__(
+                    task_id,
+                    tasks['marking'],
+                    raw_classifications,
+                    aggregations
+                )
 
         return aggregations
 
