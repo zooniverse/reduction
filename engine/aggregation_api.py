@@ -282,31 +282,39 @@ class AggregationAPI:
 
         self.oldest_new_classification = datetime.datetime.now()
 
-    def __aggregate__(self,given_workflow_id = None,given_subject_ids=None):
+    def __aggregate__(self, given_workflow_id=None, given_subject_ids=None):
         """
         the main function to call when running aggregation
         """
-        # start by migrating any new classifications (since previous run) from postgres into cassandra
-        # this will also give us a list of the migrated subjects, which is the list of subjects we want to run
-        # aggregation on (if a subject has no new classifications, why bother rerunning aggregation)
-        # this is actually just for projects like annotate and folger where we run aggregation on subjects that
-        # have not be retired. If we want subjects that have been specifically retired, we'll make a separate call
-        # for that
-        for workflow_id,version in self.versions.items():
-            if (given_workflow_id is not None) and (workflow_id != given_workflow_id):
+        # start by migrating any new classifications (since previous run) from
+        # postgres into cassandra this will also give us a list of the
+        # migrated subjects, which is the list of subjects we want to run
+        # aggregation on (if a subject has no new classifications, why bother
+        # rerunning aggregation) this is actually just for projects like
+        # annotate and folger where we run aggregation on subjects that have
+        # not be retired. If we want subjects that have been specifically
+        # retired, we'll make a separate call for that
+        for workflow_id, version in self.versions.items():
+            if (
+                given_workflow_id is not None and
+                workflow_id != given_workflow_id
+            ):
                 continue
 
             if given_subject_ids is None:
                 migrated_subjects = self.__migrate__(workflow_id,version)
+                previously_aggregated = self.__get_previously_aggregated__(
+                    workflow_id
+                )
 
-                # for this workflow, what subjects have previously been aggregated?
-                previously_aggregated = self.__get_previously_aggregated__(workflow_id)
-
-                # the migrated_subject can contain classifications for subjects which are not yet retired
-                # so if we want only retired subjects, make a special call
-                # otherwise, use the migrated list of subjects
+                # the migrated_subject can contain classifications for subjects
+                # which are not yet retired so if we want only retired
+                # subjects, make a special call otherwise, use the migrated
+                # list of subjects
                 if self.only_retired_subjects:
-                    subject_set = self.__get_newly_retired_subjects__(workflow_id)
+                    subject_set = self.__get_newly_retired_subjects__(
+                        workflow_id
+                    )
                 else:
                     subject_set = migrated_subjects
             else:
@@ -315,13 +323,16 @@ class AggregationAPI:
                 previously_aggregated = subject_set
 
             if subject_set == []:
-                print("skipping workflow " + str(workflow_id) + " due to an empty subject set")
+                print(
+                    "skipping workflow {} due to an empty subject set".format(
+                        workflow_id
+                    )
+                )
                 continue
             print(self.only_retired_subjects)
             print("workflow id : " + str(workflow_id))
             print("aggregating " + str(len(subject_set)) + " subjects")
 
-            # self.__describe__(workflow_id)
             tasks = self.workflows[workflow_id]
 
             # set up the clustering algorithms for the shapes we actually use
@@ -332,38 +343,63 @@ class AggregationAPI:
             aggregations = {}
 
             # iterate subject by subject
-            for ii,(raw_classifications,raw_markings,raw_surveys,image_dimensions) in enumerate(self.__sort_annotations__(workflow_id,subject_set)):
+            for ii, (
+                raw_classifications,
+                raw_markings,
+                raw_surveys,
+                image_dimensions
+            ) in enumerate(
+                self.__sort_annotations__(workflow_id, subject_set)
+            ):
                 if not tasks.get('survey'):
-                    # do we have any marking tasks?
                     if tasks.get('marking'):
-                        aggregations = self.__cluster__(used_shapes,raw_markings,image_dimensions,aggregations)
-                        # assert (clustering_aggregations != {}) and (clustering_aggregations is not None)
+                        aggregations = self.__cluster__(
+                            used_shapes,
+                            raw_markings,
+                            image_dimensions,
+                            aggregations
+                        )
 
-                    # we ALWAYS have to do classifications - even if we only have marking tasks, we need to do
-                    # tool classification and existence classifications
-                    aggregations = self.classification_alg.__aggregate__(raw_classifications,self.workflows[workflow_id],aggregations,workflow_id)
+                    # we ALWAYS have to do classifications - even if we only
+                    # have marking tasks, we need to do tool classification
+                    # and existence classifications
+                    aggregations = self.classification_alg.__aggregate__(
+                        raw_classifications,
+                        self.workflows[workflow_id],
+                        aggregations,
+                        workflow_id
+                    )
                 else:
                     if self.project_id == 593:
-                        # Wildcam Gorongosa is different - because why not?
                         survey_alg = gorongosa_aggregation.GorongosaSurvey()
                     else:
                         survey_alg = survey_aggregation.Survey()
 
                     print("aggregating survey results")
-                    aggregations = survey_alg.__aggregate__(raw_surveys,aggregations)
+                    aggregations = survey_alg.__aggregate__(
+                        raw_surveys,
+                        aggregations
+                    )
 
-                # upsert at every 250th subject - not sure if that's actually ideal but might be a good trade off
+                # upsert at every 250th subject - not sure if that's actually
+                # ideal but might be a good trade off
                 if (ii > 0) and (ii % 250 == 0):
-                    # finally, store the results
                     print("upserting results")
-                    self.__upsert_results__(workflow_id,aggregations,previously_aggregated)
+                    self.__upsert_results__(
+                        workflow_id,
+                        aggregations,
+                        previously_aggregated
+                    )
                     aggregations = {}
 
             print(aggregations)
-            # finally upsert any left over results
             if aggregations != {}:
                 print("upserting results")
-                self.__upsert_results__(workflow_id,aggregations,previously_aggregated)
+                self.__upsert_results__(
+                    workflow_id,
+                    aggregations,
+                    previously_aggregated
+                )
 
     def __extract_width_height__(self,metadata):
         """
