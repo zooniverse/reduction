@@ -333,9 +333,9 @@ class AggregationAPI:
 
             # iterate subject by subject
             for ii,(raw_classifications,raw_markings,raw_surveys,image_dimensions) in enumerate(self.__sort_annotations__(workflow_id,subject_set)):
-                if tasks['survey'] == {}:
+                if not tasks.get('survey'):
                     # do we have any marking tasks?
-                    if tasks['marking'] != {}:
+                    if tasks.get('marking'):
                         aggregations = self.__cluster__(used_shapes,raw_markings,image_dimensions,aggregations)
                         # assert (clustering_aggregations != {}) and (clustering_aggregations is not None)
 
