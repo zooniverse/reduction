@@ -272,25 +272,21 @@ class TranscriptionAPI(AggregationAPI):
                     print(chr(8) + c,)
             print()
 
-    def __readin_tasks__(self,workflow_id):
+    def __readin_tasks__(self, workflow_id):
+        tasks = {}
+
         if self.project_id == 245:
-            # marking_tasks = {"T2":["image"]}
-            marking_tasks = {"T2":["text","image"]}
-            # todo - where is T1?
-            classification_tasks = {"T0":True,"T3" : True}
-
-            return classification_tasks,marking_tasks,{}
+            tasks['marking'] = {"T2":["text","image"]}
+            # TODO - where is T1?
+            tasks['classification'] = {"T0":True,"T3" : True}
         elif self.project_id == 376:
-            marking_tasks = {"T2":["text"]}
-            classification_tasks = {"T0":True,"T3":True}
-
-            print(AggregationAPI.__readin_tasks__(self,workflow_id))
-
-            return classification_tasks,marking_tasks,{}
+            tasks['marking'] = {"T2":["text"]}
+            tasks['classification'] = {"T0":True,"T3":True}
+            print(AggregationAPI.__readin_tasks__(self, workflow_id))
         else:
             raise ValueError('project_id must be either 245 or 376')
 
-
+        return tasks
 
     def __s3_connect__(self):
         """
