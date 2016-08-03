@@ -1753,7 +1753,7 @@ class AggregationAPI:
 
             # for development only really - if we are not interested in a certain type of marking
             # right now - just skip it
-            if shape not in self.workflows[workflow_id][1][task_id]:
+            if shape not in self.workflows[workflow_id]['marking'][task_id]:
                 continue
 
             if shape not in self.marking_params_per_shape:
