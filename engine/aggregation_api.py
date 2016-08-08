@@ -1896,10 +1896,10 @@ class AggregationAPI:
 
                     # see https://github.com/zooniverse/Panoptes-Front-End/issues/2155 for why this is needed
                     if self.project_id in self.survey_projects:
-                        task_id = tasks['survey'].keys()[0]
+                        task_id = tasks.get('survey', {}).keys()[0]
 
                     # is this a marking task?
-                    if task_id in tasks['marking']:
+                    if task_id in tasks.get('marking', {}):
                         # skip over any improperly formed annotations - due to browser problems etc.
                         if not isinstance(task["value"],list):
                             print("not properly formed marking - skipping")
@@ -1907,18 +1907,31 @@ class AggregationAPI:
 
                         # a marking task will have follow up classification tasks - even if none are explicitly asked
                         # i.e. existence, or how many users clicked on a given "area"
-                        raw_markings,raw_classifications = self.__add_markings_annotations__(subject_id,workflow_id,task_id,user_id,task["value"],raw_markings,raw_classifications,tasks['marking'],tasks['classification'],dimensions)
+                        raw_markings, raw_classifications = (
+                            self.__add_markings_annotations__(
+                                subject_id,
+                                workflow_id,
+                                task_id,
+                                user_id,
+                                task["value"],
+                                raw_markings,
+                                raw_classifications,
+                                tasks.get('marking', {}),
+                                tasks.get('classification', {}),
+                                dimensions
+                            )
+                        )
 
                     # we a have a pure classification task
-                    elif task_id in tasks['classification']:
+                    elif task_id in tasks.get('classification', {}):
                         raw_classifications = self.__add_classification_annotation__(subject_id,user_id,task_id,task,raw_classifications)
-                    elif task_id in tasks['survey']:
+                    elif task_id in tasks.get('survey', {}):
                         raw_surveys = self.__add_survey_annotation__(subject_id,user_id,task_id,task,raw_surveys)
                     else:
                         warning(
-                            tasks['marking'],
-                            tasks['classification'],
-                            tasks['survey']
+                            tasks.get('marking'),
+                            tasks.get('classification'),
+                            tasks.get('survey')
                         )
                         warning(task_id)
                         warning(task)
