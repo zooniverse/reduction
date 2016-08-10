@@ -12,6 +12,8 @@ import cPickle as pickle
 import classification
 import requests
 
+from panoptes_client import Workflow
+
 if os.path.exists("/home/ggdhines"):
     base_directory = "/home/ggdhines"
 else:
@@ -387,9 +389,7 @@ class SubjectRetirement(classification.Classification):
             if (count >= 3) and (percent >= 0.6):
                 to_retire.append(subject_id)
 
-        headers = {"Accept":"application/vnd.api+json; version=1","Content-Type": "application/json", "Authorization":"Bearer "+self.token}
-        params = {"retired_subjects":to_retire}
-        r = requests.post("https://panoptes.zooniverse.org/api/workflows/"+str(self.workflow_id)+"/links/retired_subjects",headers=headers,json=params)
+        Workflow.find(self.workflow_id).retire_subjects(to_retire)
 
         return []
 

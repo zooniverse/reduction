@@ -20,6 +20,7 @@ from classification import Classification
 from helper_functions import warning
 from rectangle_clustering import RectangleClustering
 from transcription_output import ShakespearesWorldOutput,AnnotateOutput
+from panoptes_client import Workflow
 
 __author__ = 'ggdhines'
 
@@ -109,31 +110,9 @@ class SubjectRetirement(Classification):
                 )
             self.project.__panoptes_connect__()
 
-        token = self.project.token
-
         self.total_retired += len(to_retire)
-
-        # need to retire the subjects one by one
-        for retired_subject in to_retire:
-            self.to_retire.add(retired_subject)
-            try:
-                headers = {"Accept":"application/vnd.api+json; version=1","Content-Type": "application/json", "Authorization":"Bearer "+token}
-                params = {"subject_id":retired_subject}
-                r = requests.post("https://panoptes.zooniverse.org/api/workflows/"+str(workflow_id)+"/retired_subjects",headers=headers,data=json.dumps(params))
-                r.raise_for_status()
-            except TypeError as e:
-                warning(e)
-                rollbar.report_exc_info()
-
-        # if to_retire != set():
-        #     print("total retired so far " + str(self.total_retired))
-
-        # print("we would have retired " + str(len(self.to_retire)))
-        # print("with non-blanks " + str(len(self.to_retire)-blank_retirement))
-        # print(str(len(self.to_retire)-blank_retirement))
-        #
-        # self.num_retired = len(self.to_retire)
-        # self.non_blanks_retired = len(self.to_retire)-blank_retirement
+        self.to_retire.update(to_retire)
+        Workflow.find(workflow_id).retire_subjects(to_retire)
 
         return aggregations
 

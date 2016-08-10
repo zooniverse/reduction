@@ -30,6 +30,7 @@ import psycopg2
 import csv_output
 import helper_functions
 from helper_functions import warning
+from panoptes_client import Panoptes
 
 base_directory = "/home/ggdhines/"
 
@@ -1358,6 +1359,11 @@ class AggregationAPI:
 
             self.user_name = api_details["panoptes_username"]
             self.password = api_details["panoptes_password"]
+            Panoptes.connect(
+                endpoint=self.host,
+                username=self.user_name,
+                password=self.password
+            )
 
         self.token = None
 
