@@ -422,15 +422,29 @@ class TranscriptionAPI(AggregationAPI):
 
 if __name__ == "__main__":
     try:
-        opts, args = getopt.getopt(sys.argv[1:],"shi:e:d:",["summary","project_id=","environment=","end_date="])
+        opts, args = getopt.getopt(
+            sys.argv[1:],
+            "shi:e:d:w",
+            [
+                "summary",
+                "project_id=",
+                "environment=",
+                "end_date=",
+                "workflow_id="
+            ]
+        )
     except getopt.GetoptError:
-        warning('transcription.py -i <project_id> -e: <environment> -d: <end_date>')
+        warning(
+            'transcription.py -i <project_id> -e <environment> -d <end_date>'
+            '-w <workflow_id>'
+        )
         sys.exit(2)
 
     environment = os.environ.get('ENVIRONMENT', 'development')
     project_id = None
     end_date = None
     summary = False
+    workflow_id = None
 
     for opt, arg in opts:
         if opt in ["-i","--project_id"]:
@@ -441,6 +455,8 @@ if __name__ == "__main__":
             end_date = parser.parse(arg)
         elif opt in ["-s","--summary"]:
             summary = True
+        elif opt in ["-w", "--workflow_id"]:
+            workflow_id = int(arg)
 
     if project_id is None:
         raise ValueError('project_id is None')
@@ -448,7 +464,7 @@ if __name__ == "__main__":
     with TranscriptionAPI(project_id,environment,end_date) as project:
         project.__setup__()
 
-        processed_subjects = project.__aggregate__()
+        processed_subjects = project.__aggregate__(workflow_id)
 
         # only send summary emails on Tuesday
         if datetime.datetime.today().weekday() == 1:
