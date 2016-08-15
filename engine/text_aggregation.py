@@ -466,7 +466,7 @@ if __name__ == "__main__":
 
         processed_subjects = project.__aggregate__(workflow_id)
 
-        # only send summary emails on Tuesday
-        if datetime.datetime.today().weekday() == 1:
+        # only send summary emails on Thursday
+        if datetime.datetime.today().weekday() == 3:
             project.__summarize__()
 
