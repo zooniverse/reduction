@@ -424,7 +424,7 @@ if __name__ == "__main__":
     try:
         opts, args = getopt.getopt(
             sys.argv[1:],
-            "shi:e:d:w",
+            "shi:e:d:w:",
             [
                 "summary",
                 "project_id=",
