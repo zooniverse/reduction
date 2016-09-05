@@ -593,10 +593,9 @@ class CsvOut:
             # the summary file will contain just line per subject
             csv_file.write("subject_id")
 
-            # extract only the tools which can actually make markings of the desired shape
-            # [1] - is the list of marking tasks, i.e. [0] is the list of classification tasks and [2] is
-            # survey tasks
-            for tool_id,tool_shape in enumerate(self.workflows[workflow_id][1][task_id]):
+            for tool_id, tool_shape in enumerate(
+                self.workflows[workflow_id]['marking'][task_id]
+            ):
                 # does this particular tool use the desired shape?
                 if tool_shape != shape:
                     continue
