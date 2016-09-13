@@ -151,7 +151,11 @@ class CsvOut:
         :param shape:
         :return:
         """
-        relevant_tools = [tool_id for tool_id,tool_shape in enumerate(self.workflows[workflow_id][1][task_id]) if tool_shape == given_shape]
+        relevant_tools = [
+            tool_id for tool_id, tool_shape
+            in enumerate(self.workflows[workflow_id]['marking'][task_id])
+            if tool_shape == given_shape
+        ]
         counter = {t:{} for t in relevant_tools}
         aggreement = []
 
