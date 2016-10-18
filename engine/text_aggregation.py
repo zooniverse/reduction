@@ -145,7 +145,7 @@ class TranscriptionAPI(AggregationAPI):
         aggregations = self.__merge_aggregations__(aggregations,image_aggregations)
         return aggregations
 
-    def __setup__(self):
+    def __setup__(self, workflow_id=None):
         """
         do setup specifically for annotate and shakespeare's world.
         things like using a special classification algorithm (which is able to retire subject) and
@@ -154,7 +154,8 @@ class TranscriptionAPI(AggregationAPI):
         """
         AggregationAPI.__setup__(self)
 
-        workflow_id = self.workflows.keys()[0]
+        if not workflow_id:
+            workflow_id = self.workflows.keys()[0]
 
         # set the classification algorithm which will retire the subjects
         self.__set_classification_alg__(SubjectRetirement,self)
@@ -181,11 +182,11 @@ class TranscriptionAPI(AggregationAPI):
         if self.project_id == 245:
             import annotate
             self.text_algorithm = annotate.AnnotateClustering("text",self,additional_text_args)
-            self.output_tool = AnnotateOutput(self)
+            self.output_tool = AnnotateOutput(self, workflow_id)
         elif self.project_id == 376:
             import folger
             self.text_algorithm = folger.FolgerClustering("text",self,additional_text_args)
-            self.output_tool = ShakespearesWorldOutput(self)
+            self.output_tool = ShakespearesWorldOutput(self, workflow_id)
         else:
             raise ValueError('project_id must be either 245 or 376')
 
@@ -441,7 +442,7 @@ if __name__ == "__main__":
         raise ValueError('project_id is None')
 
     with TranscriptionAPI(project_id,environment,end_date) as project:
-        project.__setup__()
+        project.__setup__(workflow_id)
 
         processed_subjects = project.__aggregate__(workflow_id)
 

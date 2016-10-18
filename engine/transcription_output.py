@@ -52,10 +52,13 @@ class UnicodeWriter:
 class TranscriptionOutput:
     __metaclass__ = ABCMeta
 
-    def __init__(self,project):
+    def __init__(self, project, workflow_id):
         self.project = project
 
-        self.workflow_id = self.project.workflows.keys()[0]
+        if workflow_id:
+            self.workflow_id = workflow_id
+        else:
+            self.workflow_id = self.project.workflows.keys()[0]
         self.metadata = self.project.__get_subject_metadata__(self.workflow_id)
 
         # tags and reverse tags allow you to tokenize tags (convert a
@@ -411,9 +414,10 @@ class TranscriptionOutput:
         """
         global_list = []
 
-        workflow_id = self.project.workflows.keys()[0]
-
-        for annotations in self.project.__sort_annotations__(workflow_id,[subject_id]):
+        for annotations in self.project.__sort_annotations__(
+            self.workflow_id,
+            [subject_id]
+        ):
             # annotation[1] is the list of markings for this subject -
             # annotation[0] is the list of classifications, [2] survey
             # annotations and [3] image dimensions
@@ -459,8 +463,8 @@ class TranscriptionOutput:
             )
 
 class ShakespearesWorldOutput(TranscriptionOutput):
-    def __init__(self,project):
-        TranscriptionOutput.__init__(self,project)
+    def __init__(self, project, workflow_id):
+        TranscriptionOutput.__init__(self, project, workflow_id)
 
         self.tags = self.project.text_algorithm.tags
         self.reverse_tags = dict()
@@ -509,8 +513,8 @@ class ShakespearesWorldOutput(TranscriptionOutput):
         raise StopIteration()
 
 class AnnotateOutput(TranscriptionOutput):
-    def __init__(self,project):
-        TranscriptionOutput.__init__(self,project)
+    def __init__(self, project, workflow_id=None):
+        TranscriptionOutput.__init__(self, project, workflow_id)
 
         # set up the reverse tags - so we can take a token (representing a full
         # tag) and replace it with the original tag
