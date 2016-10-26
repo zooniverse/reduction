@@ -166,7 +166,7 @@ class FolgerClustering(TextClustering):
             # put tags back into multicharacter format
             t = self.__reset_tags__(t)
             # instead of chr(24), use "\u0018" - postgres prefers that
-            new_aligned.append(t.replace(chr(24),unicode("\u0018")))
+            new_aligned.append(t.replace(chr(24), u"\0018"))
 
         # if the text is horizontal - i.e. the angle of the center is less than 45 degrees
         # sort the aligned text by x coordinates - otherwise sort by DECREASING y coordinates
