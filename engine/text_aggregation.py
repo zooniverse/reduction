@@ -5,12 +5,11 @@ import boto3
 import datetime
 import getopt
 import helper_functions
-import json
 import os
 import parser
-import requests
 import rollbar
 import sys
+import time
 import yaml
 
 from aggregation_api import AggregationAPI
@@ -21,6 +20,7 @@ from helper_functions import warning
 from rectangle_clustering import RectangleClustering
 from transcription_output import ShakespearesWorldOutput,AnnotateOutput
 from panoptes_client import Workflow
+from panoptes_client.panoptes import PanoptesAPIException
 
 __author__ = 'ggdhines'
 
@@ -112,7 +112,13 @@ class SubjectRetirement(Classification):
 
         self.total_retired += len(to_retire)
         self.to_retire.update(to_retire)
-        Workflow.find(workflow_id).retire_subjects(to_retire)
+
+        for attempt in range(10):
+            try:
+                Workflow.find(workflow_id).retire_subjects(to_retire)
+                break
+            except PanoptesAPIException:
+                time.sleep(attempt * 30)
 
         return aggregations
 
