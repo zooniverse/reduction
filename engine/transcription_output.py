@@ -77,6 +77,10 @@ class TranscriptionOutput:
         aggregation_out = [
             ['subject_id', 'aggregated text', 'accuracy'],
         ]
+        clustered_out = [
+            ['subject_id', 'cluster number', 'coordinates',
+             'individual transcription'],
+        ]
 
         metadata_field_names = []
 
@@ -94,7 +98,7 @@ class TranscriptionOutput:
             sum_accuracy = 0
             aggregated_text = ""
 
-            for t in subject_aggregation['text']:
+            for cluster_number, t in enumerate(subject_aggregation['text']):
                 aggregated_text = aggregated_text + "\n" + re.sub(
                                  r'<disagreement>.*?</disagreement>',
                                  '?',
@@ -102,6 +106,14 @@ class TranscriptionOutput:
                          )
 
                 sum_accuracy += t['accuracy']
+
+                for transcription in t['individual transcriptions']:
+                    clustered_out.append([
+                        subject_id,
+                        cluster_number,
+                        ", ".join(transcription['coordinates']),
+                        transcription['text']
+                    ])
 
             new_row = [
                 str(subject_id),
@@ -120,6 +132,11 @@ class TranscriptionOutput:
             os.path.join('/', 'tmp', '{}.csv'.format(project_id)), 'w'
         ) as out_file:
             UnicodeWriter(out_file).writerows(aggregation_out)
+
+        with open(
+            os.path.join('/', 'tmp', '{} clusters.csv'.format(project_id)), 'w'
+        ) as out_file:
+            UnicodeWriter(out_file).writerows(clustered_out)
 
     def __json_output__(self,subject_id_filter=None):
         aggregations_to_json = dict()
@@ -457,6 +474,12 @@ class TranscriptionOutput:
             )
             t.add(
                 os.path.join('/', 'tmp', '{}.csv'.format(
+                    self.project.project_id
+                )),
+                arcname=self.project.project_name+".csv"
+            )
+            t.add(
+                os.path.join('/', 'tmp', '{} clusters.csv'.format(
                     self.project.project_id
                 )),
                 arcname=self.project.project_name+".csv"
