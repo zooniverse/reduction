@@ -377,7 +377,7 @@ class TranscriptionAPI(AggregationAPI):
             Source='greg@zooniverse.org',
             Destination={
                 'ToAddresses': [
-                    'sysadmins@zooniverse.org',self.email_recipients
+                    'sysadmins@zooniverse.org'
                 ]#,
                 # 'CcAddresses': [
                 #     'string',
@@ -452,7 +452,4 @@ if __name__ == "__main__":
 
         processed_subjects = project.__aggregate__(workflow_id)
 
-        # only send summary emails on Thursday
-        if datetime.datetime.today().weekday() == 3:
-            project.__summarize__()
-
+        project.__summarize__()
