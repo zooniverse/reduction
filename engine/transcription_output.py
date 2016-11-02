@@ -111,7 +111,7 @@ class TranscriptionOutput:
                     clustered_out.append([
                         subject_id,
                         cluster_number,
-                        ", ".join(transcription['coordinates']),
+                        ", ".join(str(transcription['coordinates'])),
                         transcription['text']
                     ])
 
