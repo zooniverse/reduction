@@ -34,7 +34,7 @@ class UnicodeWriter:
         self.encoder = codecs.getincrementalencoder(encoding)()
 
     def writerow(self, row):
-        self.writer.writerow([s.encode("utf-8") for s in row])
+        self.writer.writerow([self.convert(s).encode("utf-8") for s in row])
         # Fetch UTF-8 output from the queue ...
         data = self.queue.getvalue()
         data = data.decode("utf-8")
@@ -48,6 +48,25 @@ class UnicodeWriter:
     def writerows(self, rows):
         for row in rows:
             self.writerow(row)
+
+    def convert(self, v):
+        if isinstance(v, bool):
+            if v:
+                return 'True'
+            else:
+                return 'False'
+        if v is None:
+            return ''
+        if isinstance(v, list):
+            return ",".join(map(self.convert, v))
+        if isinstance(v, dict):
+            return ",".join([
+                '{}: {}'.format(k, self.convert(x)) for k, x in v.items()
+            ])
+        if isinstance(v, int):
+            return str(v)
+        return v
+
 
 class TranscriptionOutput:
     __metaclass__ = ABCMeta
