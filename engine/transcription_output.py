@@ -501,7 +501,7 @@ class TranscriptionOutput:
                 os.path.join('/', 'tmp', '{} clusters.csv'.format(
                     self.project.project_id
                 )),
-                arcname=self.project.project_name+".csv"
+                arcname=self.project.project_name+" clusters.csv"
             )
 
 class ShakespearesWorldOutput(TranscriptionOutput):
