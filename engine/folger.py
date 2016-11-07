@@ -2,6 +2,8 @@
 import numpy as np
 import math
 import networkx
+import re
+
 from text_clustering import TextClustering
 from helper_functions import warning
 __author__ = 'greg'
@@ -40,6 +42,13 @@ class FolgerClustering(TextClustering):
 
         self.total = 0
         self.error = 0
+
+    def __line_alignment__(self, lines):
+        _lines = []
+        for line in _lines:
+            _lines.append(re.sub(r'</?(ex|del|ins|unclear|sup)>', '', line))
+
+        return super(FolgerClustering, self).__line_alignment__(_lines)
 
     def __accuracy__(self,s):
         assert isinstance(s,str)
