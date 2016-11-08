@@ -45,7 +45,7 @@ class FolgerClustering(TextClustering):
 
     def __line_alignment__(self, lines):
         _lines = []
-        for line in _lines:
+        for line in lines:
             _lines.append(re.sub(r'</?(ex|del|ins|unclear|sup)>', '', line))
 
         return super(FolgerClustering, self).__line_alignment__(_lines)
