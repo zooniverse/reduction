@@ -804,50 +804,39 @@ class AggregationAPI:
 
         return [r[0] for r in cursor.fetchall()]
 
-    def __get_newly_retired_subjects__(self,workflow_id):
+    def __get_newly_retired_subjects__(self, workflow_id):
         """
         gets the subjects to aggregate
         if we need retired subjects, query against the production postgresDB
         if we need only recent subjects, query against the cassandra DB
         :param workflow_id:
-        :param only_retired_subjects: return only subjects which have been retired
-        :param only_recent_subjects: return subjects which have been classified/marked/transcribed/retired since the last running of the algorithm
+        :param only_retired_subjects: return only subjects which have been
+            retired
+        :param only_recent_subjects: return subjects which have been
+            classified/marked/transcribed/retired since the last running of the
+            algorithm
         :return:
         """
+
         subjects = []
         print('finding subjects classified for workflow ' + str(workflow_id))
-        # for tate/folger we want to aggregate subjects while they are alive (not retired)
-        # so self.only_retired_subjects would be False
-        # but for printing out the json blobs, then we want only retired subjects - which
-        # is where we set only_retired_subjects=True
+        print("selecting only subjects retired since last run")
+        stmt = (
+            'SELECT * FROM "subjects" '
+            'INNER JOIN "subject_workflow_counts" '
+            'ON "subject_workflow_counts"."subject_id" = "subjects"."id" '
+            'WHERE "subject_workflow_counts"."workflow_id" = {} AND '
+            '"subject_workflow_counts"."retired_at" >= \'{}\''
+        ).format(workflow_id, self.oldest_new_classification)
 
-        if True:#self.__is_project_live__() and (self.only_retired_subjects or only_retired_subjects):
-            print("selecting only subjects retired since last run")
-            stmt = """ SELECT * FROM "subjects"
-                    INNER JOIN "subject_workflow_counts" ON "subject_workflow_counts"."subject_id" = "subjects"."id"
-                    WHERE "subject_workflow_counts"."workflow_id" = """ + str(workflow_id) + """ AND "subject_workflow_counts"."retired_at" >= '""" + str(self.oldest_new_classification) + """'"""
+        cursor = self.postgres_session.cursor()
+        cursor.execute(stmt)
+        self.postgres_session.commit()
 
-            cursor = self.postgres_session.cursor()
-            cursor.execute(stmt)
-            self.postgres_session.commit()
+        for subject in cursor.fetchall():
+            subjects.append(subject[0])
 
-            for subject in cursor.fetchall():
-                subjects.append(subject[0])
-
-        else:
-            # see http://stackoverflow.com/questions/25513447/unable-to-coerce-2012-11-11-to-a-formatted-date-long
-            # for discussion about acceptable cassandra time stamp formats
-            # why is this not a problem in migration? who knows :(
-            t = self.__get_most_recent__()
-            workflow_v = int(self.versions[workflow_id])
-
-            stmt = "SELECT subject_id FROM classifications WHERE workflow_id = " + str(workflow_id) + " and workflow_version = " + str(workflow_v) + " and id >= " + str(t) + ";"
-            print("selecting all subjects - including those not retired")
-            # assert False
-
-            subjects = set([r.subject_id for r in self.cassandra_session.execute(stmt)])
-
-        return list(subjects)
+        return subjects
 
     def __get_subject_metadata__(self,workflow_id):
         """
