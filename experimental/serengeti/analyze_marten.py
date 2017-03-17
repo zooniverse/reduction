@@ -11,7 +11,7 @@ db = client[db_name+date]
 subjects = db[db_name+"_subjects"]
 classifications = db[db_name+"_classifications"]
 
-conn = psycopg2.connect("dbname='serengeti_demo' user='mico' host='mico-serengeti-demo.cezuuccr9cw6.us-east-1.rds.amazonaws.com' password='&jgKc8dRqFvX0x4LVnk!xVONQf'")
+conn = psycopg2.connect("dbname='serengeti_demo' user='user' host='host' password='fail'")
 mico_cur = conn.cursor()
 
 serengeti_conn = psycopg2.connect("dbname='"+db_name+"' user='greg' host='localhost' password='apassword'")
